@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0e0f13">
+<title>가짜뉴스 체험 · 미디어 리터러시</title>
+<!--
+  [폴더 구조]
+  index.html
+  images/1.png ~ 15.png   (사진 번호와 동일하게 저장. png/jpg/jpeg/webp 모두 자동 인식)
+
+  1 카카오톡 아이콘 / 2,3 카카오톡 예시(참고용, 사이트에서는 직접 사용하지 않음)
+  4 네이버 블로그 아이콘 / 5,6 블로그 글 / 7 구글 아이콘 / 8 삼각김밥 썸네일
+  9 구글 홈 / 10 건강뉴스 기사 / 11 검색결과 / 12 AI 개요 / 13,14,15 국민건강지식센터
+-->
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#0e0f13;overflow:hidden;overscroll-behavior:none;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo","Pretendard","Noto Sans KR","Malgun Gothic",sans-serif;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body{display:flex;align-items:center;justify-content:center}
+button{font-family:inherit;border:0;background:none;padding:0;cursor:pointer;color:inherit}
+
+/* ===== 기기 프레임 ===== */
+#device{position:relative;width:417px;height:876px;flex:none;border-radius:66px;background:#101114;padding:12px;
+  box-shadow:0 0 0 2px #3b3d44,0 0 0 5px #17181c,0 30px 90px rgba(0,0,0,.65)}
+#device::before{content:"";position:absolute;left:-5px;top:150px;width:3px;height:60px;border-radius:2px;background:#2b2d33;box-shadow:0 80px 0 #2b2d33}
+#device::after{content:"";position:absolute;right:-5px;top:200px;width:3px;height:92px;border-radius:2px;background:#2b2d33}
+#screen{position:relative;width:100%;height:100%;border-radius:54px;overflow:hidden;background:#000;--sb:54px;--fg:#000}
+#screen[data-sb="light"]{--fg:#fff}
+body.mobile #device{width:100vw;height:100vh;height:100dvh;border-radius:0;padding:0;box-shadow:none}
+body.mobile #device::before,body.mobile #device::after{display:none}
+body.mobile #screen{border-radius:0}
+#resetBtn{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);color:#8a8f9c;font-size:13px;padding:7px 14px;border:1px solid #2b2e36;border-radius:20px}
+#resetBtn:hover{color:#fff;border-color:#555}
+body.mobile #resetBtn{display:none}
+
+/* ===== 상태바 / 다이나믹 아일랜드 / 홈바 ===== */
+#statusbar{position:absolute;top:0;left:0;right:0;height:var(--sb);display:flex;justify-content:space-between;align-items:center;
+  padding:8px 32px 0 44px;z-index:40;pointer-events:none;color:var(--fg);font-weight:600;font-size:17px;letter-spacing:.2px}
+#sbtime{pointer-events:auto;padding:6px 8px;margin-left:-8px}
+body.locked #sbtime{visibility:hidden;pointer-events:none}
+#sbright{display:flex;align-items:center;gap:6px}
+#sbright b{font-size:15px;font-weight:700}
+#island{position:absolute;top:11px;left:50%;width:124px;height:36px;border-radius:20px;background:#000;transform:translateX(-50%);z-index:45}
+#homebar{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:180px;height:28px;z-index:55;
+  display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px;color:var(--fg);cursor:pointer}
+#homebar i{display:block;width:136px;height:5px;border-radius:3px;background:currentColor;opacity:.9}
+body.locked #homebar{pointer-events:none}
+
+/* ===== 뒤로가기 ===== */
+#backbtn{position:absolute;left:10px;top:61px;width:38px;height:38px;border-radius:50%;z-index:50;display:none;place-items:center;
+  background:rgba(255,255,255,.82);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  box-shadow:0 1px 8px rgba(0,0,0,.2),0 0 0 .5px rgba(0,0,0,.08)}
+#backbtn:active{transform:scale(.92)}
+
+/* ===== 페이지 공통 ===== */
+.page{position:absolute;inset:0;display:none;background:#fff}
+.page.active{display:block;animation:pgin .24s ease}
+@keyframes pgin{from{opacity:0;transform:scale(.985)}to{opacity:1;transform:none}}
+
+/* ===== 월페이퍼 / 잠금화면 ===== */
+:root{--wall:radial-gradient(120% 70% at 20% 0%,#ffd6a5 0%,rgba(255,214,165,0) 60%),radial-gradient(100% 70% at 90% 100%,#5b7cff 0%,rgba(91,124,255,0) 65%),linear-gradient(165deg,#7b5cff 0%,#c45bd1 48%,#ff8d7a 100%)}
+#lock{position:absolute;inset:0;z-index:30;background:var(--wall);color:#fff;text-align:center;cursor:pointer;transition:transform .55s cubic-bezier(.3,.7,.2,1),opacity .55s}
+#lock.gone{transform:translateY(-12%) scale(1.08);opacity:0;pointer-events:none}
+#lock .ldate{margin-top:92px;font-size:20px;font-weight:600;opacity:.92}
+#lock .ltime{font-size:92px;font-weight:600;line-height:1.05;letter-spacing:-1px}
+#lock .lhint{position:absolute;bottom:92px;left:0;right:0;font-size:15px;opacity:.9;animation:blink 1.8s infinite}
+@keyframes blink{50%{opacity:.35}}
+#lock .lbtn{position:absolute;bottom:56px;width:50px;height:50px;border-radius:50%;background:rgba(40,40,50,.35);backdrop-filter:blur(10px);display:grid;place-items:center}
+
+/* ===== 홈 화면 ===== */
+#home{background:var(--wall);color:#fff;padding-top:calc(var(--sb) + 18px)}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);row-gap:clamp(12px,2.6vh,24px);padding:0 12px;justify-items:center}
+.app{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;width:72px;cursor:pointer}
+.ico{width:60px;height:60px;border-radius:14px;overflow:hidden;display:grid;place-items:center;font-size:31px;box-shadow:0 1px 4px rgba(0,0,0,.18)}
+.ico img{width:100%;height:100%;object-fit:cover;transform:scale(1.12);display:block;-webkit-user-drag:none}
+.app:active .ico{filter:brightness(.8)}
+.app span{font-size:11px;text-shadow:0 1px 3px rgba(0,0,0,.4);white-space:nowrap}
+.app.shake .ico{animation:shake .4s}
+@keyframes shake{20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+.badge{position:absolute;top:-6px;right:1px;min-width:21px;height:21px;border-radius:11px;background:#ff3b30;color:#fff;font-size:13px;font-weight:600;
+  display:none;place-items:center;padding:0 5px;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.spot{position:absolute;bottom:128px;left:50%;transform:translateX(-50%);padding:6px 24px;border-radius:16px;background:rgba(255,255,255,.28);font-size:12px;backdrop-filter:blur(10px)}
+.dock{position:absolute;left:10px;right:10px;bottom:22px;height:92px;border-radius:36px;background:rgba(255,255,255,.28);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+  display:flex;justify-content:space-around;align-items:center}
+.dock .app span{display:none}
+
+/* ===== 이미지(스크린샷) 페이지 ===== */
+.shotpage .scroll{position:absolute;left:0;right:0;top:var(--sb);bottom:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.shotpage .scroll::-webkit-scrollbar{display:none}
+.crop{position:relative;overflow:hidden;width:100%}
+.crop .inner{position:relative;width:100%}
+.crop img{display:block;width:100%;height:100%;-webkit-user-drag:none;pointer-events:none}
+.hot{position:absolute;border-radius:14px;cursor:pointer}
+.hot:active{background:rgba(0,0,0,.09)}
+.pad{height:30px}
+
+/* ===== 카카오톡 공통 ===== */
+.k-head{flex:none;height:calc(var(--sb) + 54px);padding:var(--sb) 18px 0 58px;display:flex;align-items:center;justify-content:space-between}
+.k-head h1{margin:0;font-size:24px;font-weight:700}
+.k-icons{display:flex;gap:16px}
+#kList.active,#chat.active,#bHome.active{display:flex;flex-direction:column}
+.k-chips{flex:none;display:flex;gap:8px;padding:6px 16px 12px}
+.k-chips span{padding:9px 16px;border-radius:20px;background:#f1f2f4;font-size:14px;font-weight:600;color:#555}
+.k-chips span.on{background:#111;color:#fff}
+#kItems{flex:1;overflow:auto}
+.k-item{display:flex;align-items:center;gap:12px;padding:12px 18px;cursor:pointer}
+.k-item:active{background:#f1f1f1}
+.k-av{width:52px;height:52px;flex:none}
+.k-av svg,.av svg{width:100%;height:100%;display:block}
+.k-mid{flex:1;min-width:0}
+.k-name{font-weight:600;font-size:16px}
+.k-pre{font-size:14px;color:#8a8a8a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.k-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;font-size:12px;color:#999}
+.k-badge{background:#ff5a3c;color:#fff;border-radius:11px;min-width:22px;height:22px;display:grid;place-items:center;font-size:13px;font-weight:600;padding:0 6px}
+.k-empty{flex:1;display:grid;place-items:center;color:#aaa;font-size:15px}
+.k-tabs{flex:none;height:86px;display:flex;justify-content:space-around;padding-top:12px;border-top:1px solid #eee;background:#fff}
+
+/* ===== 카카오톡 채팅방 ===== */
+#chat{background:#b3c7da}
+.c-head{flex:none;height:calc(var(--sb) + 56px);padding:var(--sb) 16px 0 58px;display:flex;align-items:center;justify-content:space-between;
+  background:rgba(179,199,218,.88);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:3;position:relative}
+.c-head .t{position:absolute;left:0;right:0;text-align:center;top:var(--sb);line-height:56px;font-size:17px;font-weight:700;pointer-events:none}
+.c-head .k-icons{margin-left:auto;gap:18px;position:relative}
+.c-body{flex:1;overflow-y:auto;padding:6px 12px 10px;scrollbar-width:none;scroll-behavior:smooth}
+.c-body::-webkit-scrollbar{display:none}
+.date{margin:10px auto 8px;font-size:12px;color:#fff;background:rgba(0,0,0,.2);padding:4px 12px;border-radius:12px;width:max-content}
+.row{display:flex;margin-top:5px;align-items:flex-start;animation:pop .28s ease}
+.row.first{margin-top:12px}
+@keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.row.dad .av{width:40px;height:40px;flex:none;margin-right:8px}
+.row.dad:not(.first) .av{visibility:hidden}
+.col{display:flex;flex-direction:column;max-width:74%}
+.nm{font-size:13px;color:#333;margin:0 0 4px 2px}
+.line{display:flex;align-items:flex-end;gap:5px}
+.me{justify-content:flex-end}
+.me .line{flex-direction:row-reverse}
+.bubble{background:#fff;color:#111;padding:9px 12px;border-radius:14px;font-size:15px;line-height:1.42;overflow-wrap:anywhere;word-break:keep-all}
+.dad.first .bubble{border-top-left-radius:3px}
+.me .bubble{background:#fee500}
+.me.first .bubble{border-top-right-radius:3px}
+.tm{font-size:11px;color:#4a5560;white-space:nowrap}
+.bubble.lnkb{cursor:pointer}
+.lnk{color:#1858c8;text-decoration:underline}
+.bubble.imgb{padding:0;overflow:hidden;width:210px;cursor:zoom-in;background:#fff}
+.bubble.imgb img{display:block;width:100%;-webkit-user-drag:none}
+.typing .bubble{display:flex;gap:4px;padding:13px 14px}
+.typing i{width:7px;height:7px;border-radius:50%;background:#9aa3ad;animation:dot 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes dot{0%,60%,100%{transform:none;opacity:.5}30%{transform:translateY(-4px);opacity:1}}
+.card{margin:16px auto 6px;width:92%;background:#fff;border-radius:16px;padding:16px 18px;box-shadow:0 2px 10px rgba(0,0,0,.12);animation:pop .4s}
+.card h4{margin:0 0 10px;font-size:16px}
+.card ul{margin:0;padding:0;list-style:none}
+.card li{padding:7px 0;font-size:14.5px;border-top:1px solid #f0f0f0}
+.card li::before{content:"✔";color:#1db954;margin-right:8px;font-weight:700}
+#composer{flex:none;padding:8px 10px 32px;min-height:96px}
+.fake{height:48px;border-radius:24px;background:#fff;display:flex;align-items:center;gap:10px;padding:0 10px;color:#a6adb5;font-size:15px}
+.fake .pl{width:32px;height:32px;border-radius:50%;background:#f2f3f5;display:grid;place-items:center;font-size:22px;color:#333}
+.vn{background:rgba(26,28,40,.9);border-radius:20px;padding:12px 12px 14px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  box-shadow:0 6px 24px rgba(0,0,0,.35);animation:up .3s ease}
+@keyframes up{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+.vn .lbl{font-size:12px;color:#ffe97a;margin:0 4px 2px;letter-spacing:.3px}
+.choice{display:block;width:100%;text-align:left;border:1.5px solid rgba(255,255,255,.35);background:rgba(255,255,255,.1);color:#fff;
+  border-radius:14px;padding:12px 14px;font-size:15px;line-height:1.4;margin-top:8px}
+.choice::before{content:"▶";color:#fee500;font-size:11px;margin-right:8px}
+.choice:active{background:#fee500;color:#222;border-color:#fee500}
+
+/* ===== 네이버 블로그 홈 ===== */
+.b-head{flex:none;height:calc(var(--sb) + 54px);padding:var(--sb) 18px 0 58px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee}
+.b-head h1{margin:0;font-size:20px;font-weight:800;color:#03c75a}
+.b-tabs{display:flex;gap:18px;padding:14px 18px;font-weight:700;font-size:16px;color:#aaa}
+.b-tabs .on{color:#111;border-bottom:2px solid #111;padding-bottom:6px}
+.b-empty{flex:1;display:grid;place-items:center;text-align:center;color:#9aa0a6;font-size:15px;line-height:1.7;padding:0 40px 120px}
+
+/* ===== 구글 검색창 ===== */
+#gSearch{background:#fff}
+.gs-head{padding:calc(var(--sb) + 6px) 16px 10px 56px}
+.gs-input{height:46px;border-radius:23px;background:#f1f3f4;display:flex;align-items:center;padding:0 14px;gap:8px;font-size:16px;border:2px solid #d2e3fc}
+.gs-input .caret{width:2px;height:22px;background:#1a73e8;animation:blink2 1s steps(1) infinite}
+@keyframes blink2{50%{opacity:0}}
+.gs-input .ph{color:#80868b;flex:1}
+.gs-sec{padding:14px 20px 6px;font-size:13px;color:#5f6368;font-weight:600}
+.gs-list{list-style:none;margin:0;padding:0}
+.gs-list li{display:flex;align-items:center;gap:16px;padding:14px 20px;font-size:16px;color:#202124;cursor:pointer}
+.gs-list li:active{background:#f1f3f4}
+.gs-list li .tx{flex:1}
+.gs-list li svg{flex:none}
+
+/* ===== 알림 배너 ===== */
+#notif{position:absolute;left:8px;right:8px;top:8px;z-index:60;border-radius:24px;background:rgba(246,246,248,.9);
+  backdrop-filter:blur(26px) saturate(1.6);-webkit-backdrop-filter:blur(26px) saturate(1.6);padding:12px 14px;display:flex;gap:11px;align-items:flex-start;
+  box-shadow:0 10px 34px rgba(0,0,0,.3);transform:translateY(-150%);opacity:0;pointer-events:none;
+  transition:transform .55s cubic-bezier(.2,.9,.3,1.15),opacity .3s;cursor:pointer;color:#111}
+#notif.show{transform:translateY(50px);opacity:1;pointer-events:auto}
+#notif .ni{width:40px;height:40px;border-radius:10px;overflow:hidden;flex:none}
+#notif .ni img{width:100%;height:100%;object-fit:cover;transform:scale(1.12);display:block}
+#notif .nt{flex:1;min-width:0}
+#notif .nh{display:flex;justify-content:space-between;font-size:15px;font-weight:700}
+#notif .nh span{font-weight:400;font-size:12.5px;color:#777}
+#notif .nm2{font-size:15px;line-height:1.35;margin-top:1px}
+
+/* ===== 기타 ===== */
+#lightbox{position:absolute;inset:0;z-index:62;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;cursor:zoom-out}
+#lightbox.on{display:flex;animation:pgin .2s}
+#lightbox img{max-width:94%;max-height:80%;border-radius:10px}
+#toast{position:absolute;left:50%;bottom:120px;transform:translate(-50%,20px);z-index:80;background:rgba(30,30,34,.92);color:#fff;font-size:14px;
+  padding:11px 18px;border-radius:22px;opacity:0;pointer-events:none;transition:.3s;white-space:nowrap;max-width:92%}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body class="locked">
+
+<div id="device">
+  <div id="screen" data-sb="light">
+
+    <div id="pages">
+
+      <!-- 홈 화면 -->
+      <section class="page" id="home" data-sb="light">
+        <div class="grid" id="grid"></div>
+        <div class="spot">🔍 검색</div>
+        <div class="dock" id="dock"></div>
+      </section>
+
+      <!-- 카카오톡: 채팅 목록 -->
+      <section class="page" id="kList" data-sb="dark">
+        <div class="k-head"><h1>채팅</h1>
+          <div class="k-icons">
+            <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#222" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7.5"/><path d="m17 17 6 6"/></svg>
+            <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#222" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3C7 3 2.5 6.8 2.5 11.5c0 2.8 1.7 5.3 4.3 6.8L5.5 23l5.2-3.4c.8.1 1.5.2 2.3.2 6 0 10.5-3.800 10.500-8.500"/><path d="M20 2v7M16.500 5.500h7"/></svg>
+            <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#222" stroke-width="2.2"><circle cx="13" cy="13" r="3.500"/><path d="M13 2.500l2 2.300 3-.6.9 3 2.900 1-.5 3 1.800 2.500-2.300 2-.1 3.100-3 .5-1.700 2.600L13 21.500l-2.700 1.400-1.700-2.600-3-.5-.1-3.100-2.300-2 1.800-2.500-.5-3 2.900-1 .9-3 3 .6z" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+        <div class="k-chips"><span class="on">전체</span><span>안읽음</span><span>통화</span></div>
+        <div id="kItems"></div>
+        <div class="k-empty" id="kEmpty">채팅방이 없어요</div>
+        <div class="k-tabs" id="ktabs"></div>
+      </section>
+
+      <!-- 카카오톡: 채팅방 -->
+      <section class="page" id="chat" data-sb="dark">
+        <div class="c-head"><div class="t">아빠</div>
+          <div class="k-icons">
+            <svg width="24" height="24" viewBox="0 0 26 26" fill="none" stroke="#222" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7.500"/><path d="m17 17 6 6"/></svg>
+            <svg width="24" height="24" viewBox="0 0 26 26" fill="none" stroke="#222" stroke-width="2.2" stroke-linejoin="round"><path d="M6 3h4l2 5-2.500 1.500a12 12 0 0 0 6 6L17.500 13l5 2v4c0 1.500-1.200 2.500-2.500 2.500C10 21.500 3.500 14 3.500 5.500 3.500 4.200 4.700 3 6 3z"/></svg>
+            <svg width="24" height="24" viewBox="0 0 26 26" fill="none" stroke="#222" stroke-width="2.4" stroke-linecap="round"><path d="M3 6h20M3 13h20M3 20h20"/></svg>
+          </div>
+        </div>
+        <div class="c-body" id="cbody"></div>
+        <div id="composer"></div>
+      </section>
+
+      <!-- 네이버 블로그 홈 -->
+      <section class="page" id="bHome" data-sb="dark">
+        <div class="b-head"><h1>블로그</h1>
+          <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#222" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7.500"/><path d="m17 17 6 6"/></svg>
+        </div>
+        <div class="b-tabs"><span class="on">이웃새글</span><span>추천</span><span>인기</span></div>
+        <div class="b-empty">새로 올라온 이웃 글이 없어요.<br>대화방에서 받은 링크를 눌러 보세요.</div>
+      </section>
+
+      <!-- 구글: 검색창(최근 검색 기록) -->
+      <section class="page" id="gSearch" data-sb="dark">
+        <div class="gs-head">
+          <div class="gs-input"><span class="caret"></span><span class="ph">Google에 물어보기</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="#3c4043"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.900V21h2v-3.100A7 7 0 0 0 19 11z"/></svg>
+          </div>
+        </div>
+        <div class="gs-sec">최근 검색</div>
+        <ul class="gs-list" id="gsList"></ul>
+      </section>
+
+    </div><!-- /pages -->
+
+    <div id="statusbar">
+      <span id="sbtime">00:00</span>
+      <span id="sbright">
+        <svg width="19" height="13" viewBox="0 0 19 13" fill="currentColor"><rect x="0" y="8" width="3.200" height="5" rx="1"/><rect x="5.200" y="5.500" width="3.200" height="7.500" rx="1"/><rect x="10.400" y="3" width="3.200" height="10" rx="1"/><rect x="15.600" y="0" width="3.200" height="13" rx="1"/></svg>
+        <b>5G</b>
+        <svg width="28" height="14" viewBox="0 0 28 14"><rect x=".5" y=".5" width="24" height="13" rx="4" fill="none" stroke="currentColor" opacity=".45"/><rect x="2" y="2" width="21" height="10" rx="2.800" fill="currentColor"/><rect x="25.500" y="4.500" width="2" height="5" rx="1" fill="currentColor" opacity=".45"/></svg>
+      </span>
+    </div>
+    <div id="island"></div>
+
+    <button id="backbtn" aria-label="뒤로가기">
+      <svg width="12" height="20" viewBox="0 0 12 20"><path d="M10 2 2 10l8 8" fill="none" stroke="#222" stroke-width="2.700" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div id="homebar" title="홈"><i></i></div>
+
+    <div id="notif">
+      <div class="ni" id="notifIcon"></div>
+      <div class="nt">
+        <div class="nh"><span style="color:#111;font-weight:700;font-size:15px">아빠</span><span>지금</span></div>
+        <div class="nm2">딸, 이거 봤어? 전자레인지가 위험하대.</div>
+      </div>
+    </div>
+
+    <div id="lock">
+      <div class="ldate" id="ldate"></div>
+      <div class="ltime" id="ltime"></div>
+      <div class="lbtn" style="left:44px"><svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M7 2h10v4l-2 3v13H9V9L7 6z"/></svg></div>
+      <div class="lbtn" style="right:44px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M3 8h4l2-3h6l2 3h4v12H3z" stroke-linejoin="round"/><circle cx="12" cy="13" r="4"/></svg></div>
+      <div class="lhint">화면을 터치하세요</div>
+    </div>
+
+    <div id="lightbox"><img alt=""></div>
+    <div id="toast"></div>
+  </div>
+</div>
+<button id="resetBtn">↻ 처음부터 다시</button>
+
+<script>
+/* =====================================================================
+   설정 영역 (수업에 맞게 여기만 고치면 됩니다)
+   ===================================================================== */
+const IMG_DIR = 'images/';                // 사진 폴더
+const RATIO   = {8:[1548,1920],10:[1073,1920]};   // 사진 파일이 없을 때 보여줄 자리표시 비율
+const SHOW_SUMMARY = true;                // 대화 끝에 '가짜뉴스 판별 체크리스트' 카드 표시
+
+/* 이미지 화면: 차례대로 이어 붙여 스크롤됩니다.
+   ct / cb = 사진 위/아래에서 잘라낼 비율(0~1). 사진에 찍혀 있는 상태바·하단 툴바를 가리는 용도.
+   hot = 터치 영역(사진 전체 기준 비율) → go 로 이동 */
+const SHOTS = {
+  bPost:{ bg:'#fff', items:[ {n:5, ct:.068, cb:.115}, {n:6, ct:.150, cb:0} ] },
+  gHome:{ bg:'#fff', items:[ {n:9, ct:.068, cb:0, hot:[{x:.042,y:.221,w:.916,h:.083,go:'gSearch'}]} ] },
+  gNews:{ bg:'#fff', items:[ {n:10, ct:0, cb:0} ] },
+  gSnu :{ bg:'#fff', items:[ {n:11, ct:.068, cb:0, hot:[{x:.042,y:.467,w:.916,h:.056,go:'gAi'}]} ] },
+  gAi  :{ bg:'#fff', items:[ {n:12, ct:.068, cb:0, hot:[{x:.328,y:.417,w:.289,h:.031,go:'gSite'}]} ] },
+  gSite:{ bg:'#fff', padBg:'#333', items:[ {n:13, ct:.068, cb:.112}, {n:14, ct:.0875, cb:0}, {n:15, ct:.457, cb:0} ] }
+};
+
+/* 구글 최근 검색 기록 (go: 이동할 화면, null 이면 안내 문구만 표시) */
+const RECENT = [
+  {text:'전자레인지 영양소 파괴',            go:'gNews'},
+  {text:'전자레인지 진짜 위험한가요?',        go:null},
+  {text:'서울대학교 의과대학 국민건강지식센터', go:'gSnu'},
+  {text:'헬스닷컴',                          go:null}
+];
+
+/* 아빠가 보내는 메시지 */
+const INTRO = [
+  {from:'dad', type:'text',  text:'딸, 이거 봤어? 전자레인지가 위험하대.'},
+  {from:'dad', type:'link',  text:'https://m.blog.naver.com/happymom/224479814068', go:'bPost'},
+  {from:'dad', type:'image', n:8}
+];
+
+/* 버튼식 자동 답장 대화 (미연시 선택지)
+   choices(flags) → [{text:'내가 보낼 말', replies:['아빠의 답장',...], next:'다음노드'}]
+   flags.researched 는 '국민건강지식센터 사이트(13~15번)'를 방문하면 true */
+const NODES = {
+  n1:{ choices:()=>[
+    {text:'그래요? 봐볼게요.', replies:['응, 한번 봐봐~','아빠 친구가 단톡방에 올린 걸 보고 놀라서 보냈어 😮'], next:'n2'}
+  ]},
+  n2:{ choices:()=>[
+    {text:'헉, 그럼 전자레인지 쓰면 안 되는 거예요?', replies:['그러게… 아빠도 걱정돼서 당분간 안 쓰려고 했어.','근데 우리 딸 생각은 어때?'], next:'n3'},
+    {text:'아빠, 이거 진짜인지 먼저 찾아볼게요.',    replies:['오~ 우리 딸 똑똑하네. 찾아보고 알려줘!'], next:'n3'}
+  ]},
+  n3:{ choices:(f)=> f.researched ? [
+    {text:'찾아보니까 전자레인지가 영양소를 특별히 파괴하지는 않는대요. 출처는 서울대 국민건강지식센터예요.',
+     replies:['정말? 그럼 아빠가 본 블로그 글은 뭐야?','다시 보니까 출처가 나무위키라고 적혀 있고… 맨 밑에는 쿠팡 링크도 있네? 😳'], next:'n4'}
+  ] : [
+    {text:'아직 확인 중이에요. 출처를 더 찾아보고 올게요.', replies:['그래~ 천천히 해 😊'], next:'n3'}
+  ]},
+  n4:{ choices:()=>[
+    {text:'맞아요. 근거도 불확실하고, 상품을 팔려는 목적일 수도 있어요.',
+     replies:['그렇구나… 아빠가 확인도 안 하고 보냈네. 미안~','앞으로는 출처부터 확인하고 보낼게. 고마워 우리 딸! ❤️'], next:'end'},
+    {text:'괜찮아요, 아빠! 앞으로 같이 확인하는 습관 들여요 😊',
+     replies:['그래그래, 든든하다 우리 딸~','앞으로는 출처부터 확인하고 보낼게. 고마워! ❤️'], next:'end'}
+  ]},
+  end:{ choices:()=>[] }
+};
+
+const SUMMARY = ['출처는 어디일까?','게시자는 누구일까?','근거가 있을까?','과장된 표현은 없을까?','상업적 목적은 아닐까?','다른 자료와 비교해 봤을까?'];
+
+/* =====================================================================
+   유틸
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const el = (t,c,h)=>{const e=document.createElement(t); if(c)e.className=c; if(h!=null)e.innerHTML=h; return e;};
+const pad2 = n => String(n).padStart(2,'0');
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const hhmm = ()=>{const d=new Date();return pad2(d.getHours())+':'+pad2(d.getMinutes());};
+
+const AVATAR = '<svg viewBox="0 0 52 52"><rect width="52" height="52" rx="19" fill="#a8cbf7"/><circle cx="26" cy="21" r="8.500" fill="#fff"/><path d="M10.500 44c1-9.500 8-14 15.500-14s14.500 4.500 15.500 14z" fill="#fff"/></svg>';
+
+/* ---------- 이미지 로더 (png/jpg/jpeg/webp 자동 탐색, 없으면 자리표시) ---------- */
+const EXTS = ['png','jpg','jpeg','webp'];
+const ICON_FB = {
+  1:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#FEE500"/><ellipse cx="50" cy="46" rx="36" ry="26" fill="#3A1D1D"/><path d="M33 66 27 83 53 70z" fill="#3A1D1D"/><text x="50" y="54" font-size="22" font-weight="900" text-anchor="middle" fill="#FEE500" font-family="Arial,sans-serif">TALK</text></svg>',
+  4:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#000"/><text x="38" y="72" font-size="66" font-weight="900" text-anchor="middle" fill="#1ec800" font-family="Arial,sans-serif">b</text><rect x="68" y="20" width="5" height="60" fill="#1ec800"/></svg>',
+  7:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#fff"/><text x="50" y="72" font-size="68" font-weight="900" text-anchor="middle" fill="#4285F4" font-family="Arial,sans-serif">G</text></svg>'
+};
+function PH(n){
+  if(ICON_FB[n]) return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(ICON_FB[n]);
+  const [w,h]=RATIO[n]||[883,1920];
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect width="100%" height="100%" fill="#eef0f3"/><rect x="20" y="20" width="${w-40}" height="${h-40}" fill="none" stroke="#b9bec7" stroke-width="6" stroke-dasharray="24 16"/><text x="50%" y="47%" text-anchor="middle" font-size="${w*0.1}" fill="#6b7280" font-family="sans-serif" font-weight="700">${n}번 사진</text><text x="50%" y="52%" text-anchor="middle" font-size="${w*0.045}" fill="#8b919c" font-family="sans-serif">${IMG_DIR}${n}.png 를 넣어 주세요</text></svg>`;
+  return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+}
+function loadImg(img,n){
+  let i=0;
+  img.onerror=()=>{ i++; if(i<EXTS.length){ img.src=IMG_DIR+n+'.'+EXTS[i]; } else { img.onerror=null; img.src=PH(n); } };
+  img.src=IMG_DIR+n+'.'+EXTS[0];
+}
+function iconImg(n){ const im=new Image(); im.draggable=false; im.alt=''; loadImg(im,n); return im; }
+
+/* ---------- 이미지 자르기 레이아웃 ---------- */
+function layoutCrop(box){
+  const img=box.querySelector('img'); const w=box.clientWidth;
+  if(!img.naturalWidth||!w) return;
+  const h=w*img.naturalHeight/img.naturalWidth, ct=+box.dataset.ct, cb=+box.dataset.cb;
+  const inner=box.firstElementChild;
+  inner.style.height=h+'px'; inner.style.marginTop=(-ct*h)+'px';
+  box.style.height=(h*(1-ct-cb))+'px';
+}
+const layoutPage = p => p && p.querySelectorAll('.crop').forEach(layoutCrop);
+
+/* =====================================================================
+   상태 & 라우터
+   ===================================================================== */
+const scr=$('#screen'), pagesEl=$('#pages'), backbtn=$('#backbtn');
+let stack=['home'];
+let S, tNotif, tHide, AC;
+function freshState(){ return {token:(S?S.token:0)+1, unlocked:false, notified:false, chatOpened:false, started:false, node:null, busy:false,
+  flags:{researched:false}, lastFrom:null, lastPreview:'', lastTime:''}; }
+S=freshState();
+
+function render(){
+  const cur=stack[stack.length-1];
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===cur));
+  const pg=$('#'+cur);
+  scr.dataset.sb = pg.dataset.sb || 'dark';
+  if(document.body.classList.contains('locked')) scr.dataset.sb='light';
+  backbtn.style.display = cur==='home' ? 'none' : 'grid';
+  layoutPage(pg);
+  (ENTER[cur]||(()=>{}))();
+}
+function resetScroll(id){ const s=document.querySelector('#'+id+' .scroll'); if(s) s.scrollTop=0; }
+function go(id){ if(stack[stack.length-1]===id) return; stack.push(id); resetScroll(id); render(); }
+function openApp(id){ stack=['home',id]; resetScroll(id); render(); }
+function goHome(){ closeLightbox(); stack=['home']; render(); }
+function back(){ if($('#lightbox').classList.contains('on')){closeLightbox();return;} if(stack.length>1){stack.pop();render();} }
+backbtn.onclick=back;
+$('#homebar').onclick=goHome;
+
+const ENTER = {
+  chat(){
+    if(!S.chatOpened){S.chatOpened=true; updateBadges(); renderKList();}
+    if(!S.started){S.started=true; playIntro();}
+    else {scrollChat(); renderChoices();}
+  },
+  gSite(){ S.flags.researched=true; }
+};
+
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(toast.t); toast.t=setTimeout(()=>t.classList.remove('on'),1800); }
+
+/* =====================================================================
+   홈 화면
+   ===================================================================== */
+function buildHome(){
+  const real=[
+    {name:'카카오톡', img:1, open:()=>openApp('kList'), badge:true},
+    {name:'네이버 블로그', img:4, open:()=>openApp('bHome')},
+    {name:'Google', img:7, open:()=>openApp('gHome')}
+  ];
+  const dummy=[['캘린더','📅','#fff'],['사진','🌼','#fff'],['카메라','📷','#9a9a9f'],['시계','🕒','#111'],['날씨','⛅','linear-gradient(#3a8df0,#8cc6ff)'],
+    ['지도','🗺️','linear-gradient(#7dd87f,#4aa3f2)'],['메모','📝','#ffd60a'],['설정','⚙️','#8e8e93'],['App Store','🅰️','linear-gradient(#1c9bff,#0a5cf0)'],
+    ['계산기','🧮','#ff9f0a'],['지갑','👛','#111'],['주식','📈','#111'],['건강','❤️','#fff']];
+  const dockApps=[['전화','📞','#34c759'],['Safari','🧭','linear-gradient(#fff,#cfe6ff)'],['메시지','💬','#34c759'],['음악','🎵','linear-gradient(#ff5e7e,#fa233b)']];
+  const grid=$('#grid');
+  real.forEach(a=>{
+    const d=el('div','app'); const ic=el('div','ico'); ic.appendChild(iconImg(a.img));
+    d.appendChild(ic); d.appendChild(el('span',null,a.name));
+    if(a.badge){const b=el('b','badge','1'); b.id='kbadge'; d.appendChild(b);}
+    d.onclick=a.open; grid.appendChild(d);
+  });
+  const mk=(a,parent)=>{
+    const d=el('div','app'); const ic=el('div','ico',a[1]); ic.style.background=a[2];
+    d.appendChild(ic); d.appendChild(el('span',null,a[0]));
+    d.onclick=()=>{ d.classList.remove('shake'); void d.offsetWidth; d.classList.add('shake'); toast('이 앱은 이번 수업에서 사용할 수 없어요'); };
+    parent.appendChild(d);
+  };
+  dummy.forEach(a=>mk(a,grid));
+  dockApps.forEach(a=>mk(a,$('#dock')));
+}
+function updateBadges(){ const b=$('#kbadge'); if(b) b.style.display=(S.notified&&!S.chatOpened)?'grid':'none'; }
+
+/* =====================================================================
+   카카오톡 - 채팅 목록
+   ===================================================================== */
+function buildKTabs(){
+  const c='#b7b7b7';
+  $('#ktabs').innerHTML=`
+   <svg width="30" height="30" viewBox="0 0 30 30" fill="${c}"><circle cx="15" cy="10" r="5.500"/><path d="M4.500 25c1-6 5.500-8.500 10.500-8.500S24.500 19 25.500 25z"/></svg>
+   <svg width="30" height="30" viewBox="0 0 30 30" fill="#222"><path d="M15 3C8 3 2.500 7.400 2.500 12.800c0 3.300 2 6.200 5.100 8L6.200 26.500l6-4c.9.100 1.800.2 2.800.2 7 0 12.500-4.400 12.500-9.900S22 3 15 3z"/></svg>
+   <svg width="30" height="30" viewBox="0 0 30 30" fill="${c}"><circle cx="14" cy="14" r="10"/></svg>
+   <svg width="30" height="30" viewBox="0 0 30 30" fill="${c}"><path d="M5 10h20l-1.500 15h-17z"/><path d="M10 10a5 5 0 0 1 10 0" fill="none" stroke="${c}" stroke-width="2.500"/></svg>
+   <svg width="30" height="30" viewBox="0 0 30 30" fill="${c}"><circle cx="6" cy="15" r="2.500"/><circle cx="15" cy="15" r="2.500"/><circle cx="24" cy="15" r="2.500"/></svg>`;
+}
+function renderKList(){
+  const box=$('#kItems'); box.innerHTML='';
+  $('#kEmpty').style.display=S.notified?'none':'grid';
+  box.style.display=S.notified?'block':'none';
+  if(!S.notified) return;
+  const it=el('div','k-item');
+  it.innerHTML=`<div class="k-av">${AVATAR}</div><div class="k-mid"><div class="k-name">아빠</div><div class="k-pre"></div></div>
+    <div class="k-right"><span class="tm2">${S.lastTime}</span>${S.chatOpened?'':'<div class="k-badge">1</div>'}</div>`;
+  it.querySelector('.k-pre').textContent=S.lastPreview;
+  it.onclick=()=>go('chat');
+  box.appendChild(it);
+}
+
+/* =====================================================================
+   카카오톡 - 채팅방
+   ===================================================================== */
+const cbody=$('#cbody');
+function scrollChat(){ requestAnimationFrame(()=>{cbody.scrollTop=cbody.scrollHeight;}); }
+function addDate(){
+  const d=new Date(); const w='일월화수목금토'[d.getDay()];
+  cbody.appendChild(el('div','date',`${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 ${w}요일`));
+}
+function addMsg(m){
+  const me=m.from==='me', first=S.lastFrom!==m.from; S.lastFrom=m.from;
+  const row=el('div','row '+(me?'me':'dad')+(first?' first':''));
+  if(!me) row.appendChild(el('div','av',AVATAR));
+  const col=el('div','col');
+  if(!me&&first) col.appendChild(el('div','nm','아빠'));
+  const line=el('div','line');
+  const b=el('div','bubble');
+  if(m.type==='link'){
+    b.classList.add('lnkb');
+    const a=el('span','lnk'); a.textContent=m.text; b.appendChild(a);
+    b.onclick=()=>go(m.go);
+  } else if(m.type==='image'){
+    b.classList.add('imgb');
+    const im=iconImg(m.n); b.appendChild(im);
+    b.onclick=()=>openLightbox(im.src);
+  } else b.textContent=m.text;
+  const tm=el('span','tm',hhmm());
+  line.appendChild(b); line.appendChild(tm); col.appendChild(line); row.appendChild(col);
+  cbody.appendChild(row); scrollChat();
+  S.lastPreview = m.type==='image' ? '사진을 보냈습니다.' : m.text; S.lastTime=hhmm();
+  renderKList();
+}
+function addTyping(){
+  const row=el('div','row dad typing'+(S.lastFrom!=='dad'?' first':''));
+  row.appendChild(el('div','av',AVATAR));
+  const col=el('div','col'); col.appendChild(el('div','bubble','<i></i><i></i><i></i>')); row.appendChild(col);
+  cbody.appendChild(row); scrollChat(); return row;
+}
+function addSummary(){
+  const c=el('div','card','<h4>🔍 가짜뉴스, 이렇게 가려내요</h4><ul>'+SUMMARY.map(s=>`<li>${s}</li>`).join('')+'</ul>');
+  cbody.appendChild(c); scrollChat();
+}
+async function playIntro(){
+  const tok=S.token; S.busy=true; renderChoices();
+  addDate();
+  for(let i=0;i<INTRO.length;i++){
+    if(i>0){ const t=addTyping(); await sleep(800); t.remove(); if(tok!==S.token) return; }
+    addMsg(INTRO[i]);
+  }
+  await sleep(500); if(tok!==S.token) return;
+  S.node='n1'; S.busy=false; renderChoices();
+}
+function renderChoices(){
+  const comp=$('#composer'); comp.innerHTML='';
+  const node=NODES[S.node]; const list=(node&&!S.busy)?node.choices(S.flags):[];
+  if(!list.length){
+    comp.innerHTML=`<div class="fake"><span class="pl">+</span><span style="flex:1">${S.node==='end'?'대화가 끝났어요':'메시지 입력'}</span><span class="pl">☺</span></div>`;
+    return;
+  }
+  const vn=el('div','vn','<div class="lbl">💬 답장을 골라 보세요</div>');
+  list.forEach(c=>{ const b=el('button','choice'); b.textContent=c.text; b.onclick=()=>pick(c); vn.appendChild(b); });
+  comp.appendChild(vn); scrollChat();
+}
+async function pick(c){
+  if(S.busy) return; const tok=S.token; S.busy=true; renderChoices();
+  addMsg({from:'me',type:'text',text:c.text});
+  await sleep(650); if(tok!==S.token) return;
+  for(const r of c.replies){
+    const t=addTyping(); await sleep(950); t.remove(); if(tok!==S.token) return;
+    addMsg({from:'dad',type:'text',text:r});
+    await sleep(350); if(tok!==S.token) return;
+  }
+  S.node=c.next; S.busy=false;
+  if(c.next==='end' && SHOW_SUMMARY){ await sleep(500); if(tok!==S.token) return; addSummary(); }
+  renderChoices();
+}
+
+/* =====================================================================
+   이미지(스크린샷) 화면 생성
+   ===================================================================== */
+function buildShots(){
+  for(const [id,cfg] of Object.entries(SHOTS)){
+    const sec=el('section','page shotpage'); sec.id=id; sec.dataset.sb='dark'; sec.style.background=cfg.bg;
+    const sc=el('div','scroll');
+    cfg.items.forEach(it=>{
+      const box=el('div','crop'); box.dataset.ct=it.ct; box.dataset.cb=it.cb;
+      const inner=el('div','inner'); const img=new Image(); img.draggable=false; img.alt='';
+      img.addEventListener('load',()=>layoutCrop(box));
+      inner.appendChild(img);
+      (it.hot||[]).forEach(h=>{
+        const a=el('div','hot'); a.style.cssText=`left:${h.x*100}%;top:${h.y*100}%;width:${h.w*100}%;height:${h.h*100}%`;
+        a.onclick=()=>go(h.go); inner.appendChild(a);
+      });
+      box.appendChild(inner); sc.appendChild(box); loadImg(img,it.n);
+    });
+    const pad=el('div','pad'); pad.style.background=cfg.padBg||cfg.bg; sc.appendChild(pad);
+    sec.appendChild(sc); pagesEl.appendChild(sec);
+  }
+}
+
+/* 구글 최근 검색 목록 */
+function buildGSearch(){
+  const ul=$('#gsList');
+  RECENT.forEach(r=>{
+    const li=el('li',null,`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5f6368" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      <span class="tx"></span>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9aa0a6" stroke-width="2" stroke-linecap="round"><path d="M17 7 7 17M9 7h8v8"/></svg>`);
+    li.querySelector('.tx').textContent=r.text;
+    li.onclick=()=> r.go ? go(r.go) : toast('이번 수업에서는 열리지 않는 검색 기록이에요');
+    ul.appendChild(li);
+  });
+}
+
+/* =====================================================================
+   잠금화면 · 알림 · 사운드
+   ===================================================================== */
+function tickClock(){
+  const d=new Date(); const t=pad2(d.getHours())+':'+pad2(d.getMinutes());
+  $('#sbtime').textContent=t; $('#ltime').textContent=t;
+  $('#ldate').textContent=`${d.getMonth()+1}월 ${d.getDate()}일 ${'일월화수목금토'[d.getDay()]}요일`;
+}
+function chime(){
+  try{
+    AC=AC||new (window.AudioContext||window.webkitAudioContext)(); AC.resume&&AC.resume();
+    [880,1175].forEach((f,i)=>{
+      const o=AC.createOscillator(),g=AC.createGain(); o.type='sine'; o.frequency.value=f; o.connect(g); g.connect(AC.destination);
+      const t=AC.currentTime+i*.15; g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.13,t+.02); g.gain.exponentialRampToValueAtTime(.001,t+.35);
+      o.start(t); o.stop(t+.38);
+    });
+    navigator.vibrate&&navigator.vibrate(40);
+  }catch(e){}
+}
+function unlock(){
+  if(S.unlocked) return; S.unlocked=true;
+  try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); AC.resume&&AC.resume(); }catch(e){}
+  $('#lock').classList.add('gone'); document.body.classList.remove('locked'); render();
+  tNotif=setTimeout(showNotif,3000);                 // 잠금 해제 3초 뒤 알림
+}
+function showNotif(){
+  const tok=S.token; S.notified=true; S.lastPreview=INTRO[0].text; S.lastTime=hhmm();
+  updateBadges(); renderKList();
+  $('#notif').classList.add('show'); chime();
+  tHide=setTimeout(hideNotif,7000);
+}
+function hideNotif(){ $('#notif').classList.remove('show'); }
+$('#notif').onclick=()=>{ hideNotif(); clearTimeout(tHide); stack=['home','kList','chat']; render(); };
+$('#lock').onclick=unlock;
+
+/* 사진 확대 */
+function openLightbox(src){ $('#lightbox img').src=src; $('#lightbox').classList.add('on'); }
+function closeLightbox(){ $('#lightbox').classList.remove('on'); }
+$('#lightbox').onclick=closeLightbox;
+
+/* 처음부터 다시 */
+function resetAll(){
+  clearTimeout(tNotif); clearTimeout(tHide); hideNotif(); closeLightbox();
+  S=freshState(); stack=['home'];
+  cbody.innerHTML=''; $('#composer').innerHTML=''; renderKList(); updateBadges();
+  $('#lock').classList.remove('gone'); document.body.classList.add('locked');
+  tickClock(); render();
+}
+$('#resetBtn').onclick=resetAll;
+/* 모바일용: 상단 시간을 빠르게 3번 터치해도 처음부터 다시 */
+(function(){ let n=0,t; $('#sbtime').addEventListener('click',()=>{ n++; clearTimeout(t); t=setTimeout(()=>n=0,700); if(n>=3){n=0;resetAll();} }); })();
+
+/* =====================================================================
+   화면 맞춤
+   ===================================================================== */
+function fit(){
+  const mobile=innerWidth<=500;
+  document.body.classList.toggle('mobile',mobile);
+  const dev=$('#device');
+  if(mobile){ dev.style.transform='none'; }
+  else{ const s=Math.min(1,(innerHeight-80)/876,(innerWidth-30)/417); dev.style.transform=`scale(${s})`; }
+  layoutPage($('.page.active'));
+}
+addEventListener('resize',fit);
+
+/* =====================================================================
+   시작
+   ===================================================================== */
+buildHome(); buildKTabs(); buildShots(); buildGSearch();
+$('#notifIcon').appendChild(iconImg(1));
+renderKList(); tickClock(); setInterval(tickClock,1000);
+fit(); render();
+</script>
+</body>
+</html>
